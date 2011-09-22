@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 22
+/svn/!svn/ver/30/trunk
+END
+make_source_package.sh
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/19/trunk/make_source_package.sh
+END
+make_package.sh
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/!svn/ver/19/trunk/make_package.sh
+END
+find_occurences_of_version_number.sh
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/12/trunk/find_occurences_of_version_number.sh
+END
+TODO.txt
+K 25
+svn:wc:ra_dav:version-url
+V 31
+/svn/!svn/ver/25/trunk/TODO.txt
+END
+clean_source_package.sh
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/12/trunk/clean_source_package.sh
+END
+cheeky.xcf
+K 25
+svn:wc:ra_dav:version-url
+V 33
+/svn/!svn/ver/19/trunk/cheeky.xcf
+END
+cheeky.png
+K 25
+svn:wc:ra_dav:version-url
+V 33
+/svn/!svn/ver/19/trunk/cheeky.png
+END
