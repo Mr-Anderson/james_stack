@@ -1,0 +1,14 @@
+<package>
+  <description brief="usb_rocket">
+
+     usb_rocket
+
+  </description>
+  <author>James Anderson</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/usb_rocket</url>
+
+</package>
+
+
