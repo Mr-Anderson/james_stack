@@ -1,0 +1,9 @@
+<stack>
+  <description brief="James_Stack">James Andersons ROS stack</description>
+  <author>Maintained by James Anderson</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/James_Stack</url>
+  <depend stack="ros" />
+
+</stack>
