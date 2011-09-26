@@ -23,26 +23,14 @@
 ***********************************************************/
 #include <iostream>
 #include <fstream>
-#include <cv_bridge/cv_bridge.h>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <dynamic_reconfigure/server.h>
 #include <MST_Edge_Detection/Edge_Detection_ParamsConfig.h>
+#include <usb.h>
 
 
 /***********************************************************
 * Global variables
 ***********************************************************/
-
-sensor_msgs::Image              image;
-
-unsigned char*                  g_output_image;
-
-image_transport::Subscriber     image_sub;
-image_transport::Publisher      image_pub;
-
-std::string                     topic;
-
 
 MST_Edge_Detection::Edge_Detection_ParamsConfig params;
 
@@ -53,14 +41,70 @@ MST_Edge_Detection::Edge_Detection_ParamsConfig params;
 /***********************************************************
 * Namespace Changes
 ***********************************************************/
-namespace enc = sensor_msgs::image_encodings;
+using std::string;
+
+
+/***********************************************************
+* Private Functions
+***********************************************************/
+
+/***********************************************************
+* @fn movement_handler(char control)
+* @brief sends the specifided message to the usb device
+* @param takes the device handler message and inex to be sent
+* @return gives back the delay of the message
+***********************************************************///wrapper for control_msg
+int sendMessage(usb_dev_handle* launcher, char* msg, int index)
+{
+  int i = 0;
+  int j = usb_control_msg(launcher, USB_DT_HID, USB_REQ_SET_CONFIGURATION, USB_RECIP_ENDPOINT0x200, index, msg, 8, 1000);
+
+  //be sure that msg is all zeroes again
+  msg[0] = 0x0;
+  msg[1] = 0x0;
+  msg[2] = 0x0;
+  msg[3] = 0x0;
+  msg[4] = 0x0;
+  msg[5] = 0x0;
+  msg[6] = 0x0;
+  msg[7] = 0x0;
+
+  return j;
+}
+
+/***********************************************************
+* @fn movementHandler(char control)
+* @brief sends the specifided message to the usb device
+* @param takes usb device handler and hex command
+***********************************************************/
+void movementHandler(usb_dev_handle* launcher, char control)
+{
+  char msg[8];
+  //reset
+  msg[0] = 0x0;
+  msg[1] = 0x0;
+  msg[2] = 0x0;
+  msg[3] = 0x0;
+  msg[4] = 0x0;
+  msg[5] = 0x0;
+  msg[6] = 0x0;
+  msg[7] = 0x0;
+
+  //send 0s
+  int delay = sendMessage(msg, 1);
+
+  //send control
+  msg[0] = control;
+  deally = sendMessage(msg, 0);
+
+  //and more zeroes
+  deally = sendMessage(msg, 1);
+}
 
 
 /***********************************************************
 * Message Callbacks
 ***********************************************************/
-
-
 
 /***********************************************************
 * @fn imageCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -69,180 +113,87 @@ namespace enc = sensor_msgs::image_encodings;
 * @post publishes a CV_32FC1 image using cv_bridge
 * @param takes in a ros message of a raw or cv image 
 ***********************************************************/
-void imageCallback(const sensor_msgs::ImageConstPtr& msg)
+void rocketCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-	//ROS_INFO("Edge_Detection: Image receieved");
-	
-	cv_bridge::CvImagePtr cv_ptr_src;
-	
-	//takes in the image
-	
-    try
-    {
-      cv_ptr_src = cv_bridge::toCvCopy(msg, "rgb8");
-      
-    }
-    catch (cv_bridge::Exception& e)
-    {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-      return;
-    }
-    
-    //creates internal images
-    cv::Mat sobel_x(cv_ptr_src->image.size(),CV_32FC1);
-    cv::Mat sobel_y(cv_ptr_src->image.size(),CV_32FC1);
-    cv::Mat sobel(cv_ptr_src->image.size(),CV_32FC1);
-    cv::Mat laplace(cv_ptr_src->image.size(),CV_32FC1);
-    cv::Mat canny(cv_ptr_src->image.size(),CV_32FC1);
-    std::vector<cv::Mat> Chanels;
-    cv::Mat out(cv_ptr_src->image.size(), CV_32FC1);
-    cv_bridge::CvImage out_msg;
-    
-    //sets out to zeros so it can be added to 
-    out = cv::Mat::zeros(cv_ptr_src->image.size(),CV_32FC1);
-    
-    int order;
-    if(params.second_order)
-    {
-    	order = 5;
-    	if(params.third_order)
-    	{
-    		order = 7;
-    	}
-    }
-    else
-    {
-    	order = 3;
-    }
-    
-    if(params.sobel)
-    {
-		//preforms x and y sobels
-		cv::Sobel(cv_ptr_src->image, sobel_x, 3, 1, 0, order, .3);
-		cv::Sobel(cv_ptr_src->image, sobel_y, 3, 0, 1, order , .3);
-		
-		sobel_x = cv::abs(sobel_x );
-		sobel_y = cv::abs(sobel_y );
-		
-		//adds them together
-		cv::add(sobel_x, sobel_y, sobel);
-		
-		sobel = sobel/pow(order,2);
-		
-		//splits into three chanels
-		cv::split(sobel , Chanels);
-		
 
-		//ads the sqares of the chanels together
-		for(int i = 0 ; i < 3; i++)
-		{
-			Chanels[i].convertTo(Chanels[i],CV_32FC1);
-			cv::pow(Chanels[i] , 2 ,Chanels[i] );
-		
-			cv::addWeighted(Chanels[i], params.sobel_per_add/100 , out, (100-params.sobel_per_add)/100  ,1/3, out);
 
-		} 
-		
-		//multiply by scaler
-		out = out * (params.scaler_percent/100);
-		
-		//takes the square root to get the magnitude
-		if(params.square_root)
-		{	
-			sqrt(out,out);
-		}
-    }
+  if (msg.up)
+  {
+    movement_handler(1);
+  }
+
+  else if (msg.down)
+  {
+    movement_handler(2);
+  }   
+
+  else if (msg.left)
+  {
+    movement_handler(4);
+  }
+  else if (msg.right)
+  {
+    movement_handler(8);
+  } 
+  else if (msg.fire)
+  {
+    movement_handler(10);
+  }
+  else 
+  {
+    //could also be 10 or 16
+    movement_handler(0);
+  }
+  
+  
+  if(is_open == true)
+  {
+    //send empty data
+    ret = usb_control_msg(
+      launcher,
+      USB_DT_HID,
+      USB_REQ_SET_CONFIGURATION,
+      USB_RECIP_ENDPOINT,
+      1,
+      empty_data,
+      8,  // Length of data.
+      5000  // Timeout
+    );
     
-    if(params.laplace)
-    {
-    	cv::Laplacian(cv_ptr_src->image,laplace,3);
-    	
-    	//splits into three chanels
-		cv::split(laplace , Chanels);
-		
-
-		//ads the sqares of the chanels together
-		for(int i = 0 ; i < 3; i++)
-		{
-			Chanels[i].convertTo(Chanels[i],CV_32FC1);
-			cv::pow(Chanels[i] , 2 ,Chanels[i] );
-		
-			cv::addWeighted(Chanels[i], params.laplace_per_add/100 , out, (100-params.laplace_per_add)/100 ,1/3, out);
-
-		} 
-		
-		//multiply by scaler
-		out = out * (params.scaler_percent/100);
-		
-		//takes the square root to get the magnitude
-		if(params.square_root)
-		{	
-			sqrt(out,out);
-		}
-    }
+    //send controll message
+    ret = usb_control_msg(
+    launcher,
+    USB_DT_HID,
+    USB_REQ_SET_CONFIGURATION,
+    USB_RECIP_ENDPOINT,
+    0,
+    data,
+    8,  // Length of data.
+    5000  // Timeout
+    );
     
-    int canny_order;
-    if(params.canny_second_order)
-    {
-    	canny_order = 5;
-    	if(params.canny_third_order)
-    	{
-    		canny_order = 7;
-    	}
-    }
-    else
-    {
-    	canny_order = 3;
-    }
-    
-    if(params.canny)
-    {
-    
-    	cv::split(cv_ptr_src->image , Chanels);
-    	    	
-   
-		//ads the sqares of the chanels together
-		for(int i = 0 ; i < 3; i++)
-		{
-			Chanels[i].convertTo(Chanels[i],CV_8UC1);
-			
-			cv::Canny(Chanels[i], Chanels[i], params.canny_thresh_1 , params.canny_thresh_2, canny_order);
-			
-			cv::pow(Chanels[i] , 2 ,Chanels[i] );
-			
-			Chanels[i].convertTo(Chanels[i],CV_32FC1);
-			
-			Chanels[i] = Chanels[i] * params.canny_val;
-		
-			cv::addWeighted(Chanels[i], params.canny_per_add/100 , out, (100-params.canny_per_add)/100 ,1/3, out);
+    //send empty data
+    ret = usb_control_msg(
+    launcher,
+    USB_DT_HID,
+    USB_REQ_SET_CONFIGURATION,
+    USB_RECIP_ENDPOINT,
+    1,
+    empty_data,
+    8,  // Length of data.
+    5000  // Timeout
+    );
+  }
 
-		} 
-		
-		//multiply by scaler
-		out = out * (params.scaler_percent/100);
-		
-		//takes the square root to get the magnitude
-		if(params.square_root)
-		{	
-			sqrt(out,out);
-		}
+  if (ret != 8) 
+  {
+    cout << " cant send " << endl;
+  }
 
-    }
-    
-
-	
-    
-
-	
-
-    //changes it back to a cv image then publishes message
-    out_msg.header = cv_ptr_src->header;
-    out_msg.encoding = "32FC1";
-    out_msg.image = out ;
-    
-    image_pub.publish(out_msg.toImageMsg());
 
 }
+
+
 
 /***********************************************************
 * @fn setparamsCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -267,40 +218,88 @@ void setparamsCallback(MST_Edge_Detection::Edge_Detection_ParamsConfig &config, 
 
 /***********************************************************
 * @fn main(int argc, char **argv)
-* @brief starts the Edge_Detection node
+* @brief starts the usb_rocket node and runs usb inialization and shutdown
 ***********************************************************/
 int main(int argc, char **argv)
 {
-	ros::init(argc, argv, "Edge_Detection");
-    ros::NodeHandle n;
-    image_transport::ImageTransport it(n);
-    
-   	//setup dynamic reconfigure gui
+  //setup node
+  ros::init(argc, argv, "usb_rocket");
+  ros::NodeHandle n;
+  
+  //setup dynamic reconfigure gui
+  dynamic_reconfigure::Server<MST_Edge_Detection::Edge_Detection_ParamsConfig> srv;
+  dynamic_reconfigure::Server<MST_Edge_Detection::Edge_Detection_ParamsConfig>::CallbackType f;
+  f = boost::bind(&setparamsCallback, _1, _2);
+  srv.setCallback(f);
+  
+  
+  //get topic name
+  string topic;
+  ros::Subscriber rocket_sub;
+  topic = n.resolveName("rocket");
+  rocket_sub = it.subscribe( topic , 1, rocketCallback  );
 
-    dynamic_reconfigure::Server<MST_Edge_Detection::Edge_Detection_ParamsConfig> srv;
-    dynamic_reconfigure::Server<MST_Edge_Detection::Edge_Detection_ParamsConfig>::CallbackType f;
-    f = boost::bind(&setparamsCallback, _1, _2);
-	srv.setCallback(f);
-    
-    
-    
-    //get topic name
-    topic = n.resolveName("image");
-
-	//check to see if user has defined an image to subscribe to 
-    if (topic == "/image") 
+  //usb setup
+  struct usb_bus *busses, *bus;
+  struct usb_device *dev = NULL;
+  
+  //setup variables for finding and tracking launcher
+  usb_dev_handle *launcher;
+  int claimed;
+  bool found = false ;
+  
+  //run usb initialization code
+  usb_init();
+  usb_find_busses();
+  usb_find_devices();
+  
+  //search all usb busses for rocket launcher
+  busses = usb_get_busses();
+  for (bus = busses; bus && !dev; bus = bus->next) 
+  {
+    for (dev = bus->devices; dev; dev = dev->next) 
     {
-		ROS_WARN("Edge_Detection: image has not been remapped! Typical command-line usage:\n"
-				 "\t$ ./Edge_Detection image:=<image topic> [transport]");
+      //0x0a81 is green launcher 0x0701 is blue launcher
+      if (dev->descriptor.idVendor == 0x0a81 && dev->descriptor.idProduct == 0x0701) 
+      {
+        //set launcher pointer to the device
+        launcher = usb_open(dev);
+        found = true;
+      }
     }
+  }
+  
+  if(found)
+  {
+    ROS_INFO("Found rocket launcher");
     
-
-    image_sub = it.subscribe( topic , 1, imageCallback  );
-
-    image_pub = it.advertise( "image_edges" , 5 );
-
-    ros::spin();
+    //detach device from another program
+    usb_detach_kernel_driver_np(launcher, 0);
+    usb_detach_kernel_driver_np(launcher, 1);
     
-    return 0;
+    //try to claim device
+    claimed = usb_set_configuration(launcher, 1);
+    claimed = usb_claim_interface(launcher, 0);
+    
+    if(claimed == 0)
+    {
+      //run callbacks
+      ros::spin();
+    }
+    else
+    {
+      ROS_INFO("Unable to claim rocket launcher");
+    }
+  }
+  else
+  {
+    ROS_INFO("Unable to find rocket launcher");
+  }
+  
+  //release rocket launcher and close
+  usb_release_interface(launcher, 0);
+  usb_close(launcher);
+  
+  return 0;
 }
 
