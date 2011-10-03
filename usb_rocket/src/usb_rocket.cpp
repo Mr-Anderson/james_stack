@@ -14,17 +14,15 @@
 /***********************************************************
 * Message includes
 ***********************************************************/
-#include <sensor_msgs/Image.h>
-#include <image_transport/image_transport.h>
-#include <sensor_msgs/image_encodings.h>
+#include <usb_rocket/rocket.h>
 
 /***********************************************************
 * Other includes
 ***********************************************************/
 #include <iostream>
 #include <fstream>
-#include <dynamic_reconfigure/server.h>
-#include <MST_Edge_Detection/Edge_Detection_ParamsConfig.h>
+//#include <dynamic_reconfigure/server.h>
+//#include <MST_Edge_Detection/Edge_Detection_ParamsConfig.h>
 #include <usb.h>
 
 
@@ -32,7 +30,7 @@
 * Global variables
 ***********************************************************/
 
-MST_Edge_Detection::Edge_Detection_ParamsConfig params;
+//MST_Edge_Detection::Edge_Detection_ParamsConfig params;
 
 /***********************************************************
 * Function prototypes
@@ -115,8 +113,6 @@ void movementHandler(usb_dev_handle* launcher, char control)
 ***********************************************************/
 void rocketCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-
-
   if (msg.up)
   {
     movement_handler(1);
@@ -145,52 +141,6 @@ void rocketCallback(const sensor_msgs::ImageConstPtr& msg)
     movement_handler(0);
   }
   
-  
-  if(is_open == true)
-  {
-    //send empty data
-    ret = usb_control_msg(
-      launcher,
-      USB_DT_HID,
-      USB_REQ_SET_CONFIGURATION,
-      USB_RECIP_ENDPOINT,
-      1,
-      empty_data,
-      8,  // Length of data.
-      5000  // Timeout
-    );
-    
-    //send controll message
-    ret = usb_control_msg(
-    launcher,
-    USB_DT_HID,
-    USB_REQ_SET_CONFIGURATION,
-    USB_RECIP_ENDPOINT,
-    0,
-    data,
-    8,  // Length of data.
-    5000  // Timeout
-    );
-    
-    //send empty data
-    ret = usb_control_msg(
-    launcher,
-    USB_DT_HID,
-    USB_REQ_SET_CONFIGURATION,
-    USB_RECIP_ENDPOINT,
-    1,
-    empty_data,
-    8,  // Length of data.
-    5000  // Timeout
-    );
-  }
-
-  if (ret != 8) 
-  {
-    cout << " cant send " << endl;
-  }
-
-
 }
 
 
@@ -201,7 +151,8 @@ void rocketCallback(const sensor_msgs::ImageConstPtr& msg)
 * @pre has to have the setup for the reconfigure gui
 * @post changes the parameters
 ***********************************************************/
-void setparamsCallback(MST_Edge_Detection::Edge_Detection_ParamsConfig &config, uint32_t level)
+/*
+void setparamsCallback(usb_rocket::usb_rocket_ParamsConfig &config, uint32_t level)
 {
   
   
@@ -214,7 +165,7 @@ void setparamsCallback(MST_Edge_Detection::Edge_Detection_ParamsConfig &config, 
   params = config;
   
 }
-
+*/
 
 /***********************************************************
 * @fn main(int argc, char **argv)

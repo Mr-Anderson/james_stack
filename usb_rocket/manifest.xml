@@ -9,6 +9,9 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/usb_rocket</url>
 
+
+  <depend package = "roscpp"/>
+
 </package>
 
 
