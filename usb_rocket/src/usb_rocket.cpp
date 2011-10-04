@@ -23,12 +23,15 @@
 #include <fstream>
 //#include <dynamic_reconfigure/server.h>
 //#include <MST_Edge_Detection/Edge_Detection_ParamsConfig.h>
-#include <usb.h>
+#include <stdio.h>
 
 
 /***********************************************************
 * Global variables
 ***********************************************************/
+
+//I dont konw how to pass vars into a callback
+usb_dev_handle* launcher;
 
 //MST_Edge_Detection::Edge_Detection_ParamsConfig params;
 
@@ -41,7 +44,6 @@
 ***********************************************************/
 using std::string;
 
-
 /***********************************************************
 * Private Functions
 ***********************************************************/
@@ -52,10 +54,9 @@ using std::string;
 * @param takes the device handler message and inex to be sent
 * @return gives back the delay of the message
 ***********************************************************///wrapper for control_msg
-int sendMessage(usb_dev_handle* launcher, char* msg, int index)
+int sendMessage(char* msg, int index)
 {
-  int i = 0;
-  int j = usb_control_msg(launcher, USB_DT_HID, USB_REQ_SET_CONFIGURATION, USB_RECIP_ENDPOINT0x200, index, msg, 8, 1000);
+  int j = usb_control_msg(launcher, USB_DT_HID, USB_REQ_SET_CONFIGURATION, USB_RECIP_ENDPOINT, index, msg, 8, 1000);
 
   //be sure that msg is all zeroes again
   msg[0] = 0x0;
@@ -75,9 +76,10 @@ int sendMessage(usb_dev_handle* launcher, char* msg, int index)
 * @brief sends the specifided message to the usb device
 * @param takes usb device handler and hex command
 ***********************************************************/
-void movementHandler(usb_dev_handle* launcher, char control)
+void movementHandler( char control)
 {
   char msg[8];
+  
   //reset
   msg[0] = 0x0;
   msg[1] = 0x0;
@@ -89,14 +91,14 @@ void movementHandler(usb_dev_handle* launcher, char control)
   msg[7] = 0x0;
 
   //send 0s
-  int delay = sendMessage(msg, 1);
+  int delay = sendMessage( msg, 1);
 
   //send control
   msg[0] = control;
-  deally = sendMessage(msg, 0);
+  delay = sendMessage( msg, 0);
 
   //and more zeroes
-  deally = sendMessage(msg, 1);
+  delay = sendMessage( msg, 1);
 }
 
 
@@ -111,34 +113,34 @@ void movementHandler(usb_dev_handle* launcher, char control)
 * @post publishes a CV_32FC1 image using cv_bridge
 * @param takes in a ros message of a raw or cv image 
 ***********************************************************/
-void rocketCallback(const sensor_msgs::ImageConstPtr& msg)
+void rocketCallback(const usb_rocket::rocket& msg)
 {
   if (msg.up)
   {
-    movement_handler(1);
+    movementHandler(1);
   }
 
   else if (msg.down)
   {
-    movement_handler(2);
+    movementHandler(2);
   }   
 
   else if (msg.left)
   {
-    movement_handler(4);
+    movementHandler(4);
   }
   else if (msg.right)
   {
-    movement_handler(8);
+    movementHandler(8);
   } 
   else if (msg.fire)
   {
-    movement_handler(10);
+    movementHandler(10);
   }
   else 
   {
     //could also be 10 or 16
-    movement_handler(0);
+    movementHandler(0);
   }
   
 }
@@ -178,24 +180,23 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
   
   //setup dynamic reconfigure gui
-  dynamic_reconfigure::Server<MST_Edge_Detection::Edge_Detection_ParamsConfig> srv;
-  dynamic_reconfigure::Server<MST_Edge_Detection::Edge_Detection_ParamsConfig>::CallbackType f;
-  f = boost::bind(&setparamsCallback, _1, _2);
-  srv.setCallback(f);
+  //dynamic_reconfigure::Server<MST_Edge_Detection::Edge_Detection_ParamsConfig> srv;
+  //dynamic_reconfigure::Server<MST_Edge_Detection::Edge_Detection_ParamsConfig>::CallbackType f;
+  //f = boost::bind(&setparamsCallback, _1, _2);
+  //srv.setCallback(f);
   
   
   //get topic name
   string topic;
   ros::Subscriber rocket_sub;
   topic = n.resolveName("rocket");
-  rocket_sub = it.subscribe( topic , 1, rocketCallback  );
+  rocket_sub = n.subscribe( topic , 1, rocketCallback  );
 
   //usb setup
   struct usb_bus *busses, *bus;
   struct usb_device *dev = NULL;
   
   //setup variables for finding and tracking launcher
-  usb_dev_handle *launcher;
   int claimed;
   bool found = false ;
   
